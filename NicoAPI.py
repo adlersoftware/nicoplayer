@@ -43,6 +43,7 @@ class NicoNico(object):
         self.__cookie_filename = "nico_cookie.dump"
         self.__watchdata_dic = []
         self.__cookie = None
+        self.__videopage = None
 
 
     def login(self, mail, password):
@@ -90,7 +91,11 @@ class NicoNico(object):
         if r.status_code != 200:
             raise FailedVideoInfoDownloadError()
 
-        soup = BeautifulSoup(r.text, 'html.parser')
+        self.__videopage = r.text
+        soup = BeautifulSoup(self.__videopage, 'html.parser')
+        # html = soup.prettify("utf-8")
+        # with open('%s.html' % videoid, "wb") as file:
+        #     file.write(html)
         watchdata_tag = soup.find('div', id='js-initial-watch-data')
         watchdata = watchdata_tag['data-api-data']
         # デバッグのためファイル保存
@@ -101,6 +106,11 @@ class NicoNico(object):
         unidata = uu.unescape_unicode(watchdata)
         self.__watchdata_dic = uu.pretty_unicode(unidata)
 
+    # 動画の長さを1/100秒に変換して取得（公式動画のみ）
+    def get_video_length(self):
+        if self.__watchdata_dic['video']['dmcInfo'] != None:
+            return int(self.__watchdata_dic['video']['dmcInfo']['video']['length_seconds']) * 100
+        
     # 動画情報のコピーを返す（外部から書き換えてほしくないので）
     def get_videoinfo_copy(self):
         return deepcopy(self.__watchdata_dic)
@@ -108,7 +118,7 @@ class NicoNico(object):
     # 取得した動画情報でコメントをダウンロード
     def get_comment(self):
         print("===コメント取得処理===")
-        if 'thread' in self.__watchdata_dic['video']['dmcInfo']:
+        if self.__watchdata_dic['video']['dmcInfo'] != None:
             thread_id = self.__watchdata_dic['video']['dmcInfo']['thread']['thread_id']
             needs_key = self.__watchdata_dic['video']['dmcInfo']['thread']['thread_key_required']
             user_id = self.__watchdata_dic['video']['dmcInfo']['user']['user_id']
@@ -169,11 +179,12 @@ if __name__ == '__main__':
     chdir(dirname(abspath(__file__)))
     mail = ""
     password = ""
-    videoid = "so31521243"
+    videoid = "sm9"
     nico = NicoNico()
     nico.loadCookieOrLogin(mail, password)
-    nico.load_videoinfo(videoid)
-    comment_xml = nico.get_comment()
-    f = codecs.open('%s - %s.xml' % (videoid, datetime.now().strftime('%Y%m%d%H%M%S')), 'w', "utf-8")
-    f.write(comment_xml)
-    f.close()
+    #nico.load_videoinfo(videoid)
+    # comment_xml = nico.get_comment()
+    # f = codecs.open('%s - %s.xml' % (videoid, datetime.now().strftime('%Y%m%d%H%M%S')), 'w', "utf-8")
+    # f.write(comment_xml)
+    # f.close()
+    #print(nico.get_video_length())

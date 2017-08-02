@@ -8,8 +8,8 @@ from PyQt5.QtGui import QColor, QFont
 class Nicomment(object):
 
     def __init__(self, vpos, comment):
-        if comment == "" or comment == None:
-            self.__comment = "　"
+        if comment == '' or comment == None:
+            self.__comment = '　'
         else:
             self.__comment = comment
         self.__vpos = int(vpos)
@@ -17,6 +17,10 @@ class Nicomment(object):
     def __lt__(self, other):
         # self < other
         return self.__vpos < other.vpos()
+
+    def __le__(self, other):
+        # self <= other
+        return self.__vpos <= other
 
     def vpos(self):
         return self.__vpos
@@ -35,10 +39,15 @@ class Nicomment(object):
 
     @classmethod
     def vpos_to_time(self, vpos):
+        if vpos < 0:
+            sign = '-'
+            vpos = -vpos
+        else:
+            sign = ''
         s = int(vpos) // 100
         m = s // 60
         s = s % 60
-        return "{0:02d}:{1:02d}".format(m, s)
+        return '{2}{0:02d}:{1:02d}'.format(m, s, sign)
 
 
 
@@ -46,21 +55,30 @@ class NicommentMoving(object):
 
     def __init__(self, width, line, comment):
         self.__font_size = 20
-        self.__time_limit = 400     # 表示される時間(1/100秒)
         self.__comment = comment
-        self.__life = self.__time_limit
         self.__width = width
+        self.__line = line
         self.__x = self.__width
-        self.__y = line * (self.__font_size + 5)
-        self.__speed = self.__width / self.__time_limit
+        self.__y = line * (self.__font_size + 5) + 5
+        self.__speed = 2 + (len(self.__comment) // 8)
+        self.__followed = False
 
     def move(self):
-        #self.__life -= 1 + (len(self.__comment) // 5)
-        self.__life -= 2
-        self.__x = self.__life * self.__speed
+        self.__x -= self.__speed
 
     def isMustDie(self):
-        return self.__life <= -(len(self.__comment) * self.__font_size)
+        return self.__x <= -(len(self.__comment) * self.__font_size)
+
+    # このコメントの後に続いて別のコメントを流せるか
+    def canFollow(self):
+        if self.__followed:
+            return False
+        else:
+            return self.__x + (len(self.__comment) * self.__font_size) <= self.__width / 2
+
+    def follow(self):
+        self.__followed = True
+        return self.__line
 
     def drawComment(self, event, qp):
         qp.setPen(QColor(255, 255, 255))
@@ -69,5 +87,8 @@ class NicommentMoving(object):
 
 
 if __name__ == '__main__':
-    com1 = Nicomment(100, "Hello")
-    com1.printComment()
+    # com1 = Nicomment(100, "Hello")
+    # com1.printComment()
+    print(Nicomment.vpos_to_time(300))
+    print(Nicomment.vpos_to_time(-300))
+    print(Nicomment.vpos_to_time(-1))
